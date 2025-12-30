@@ -477,30 +477,40 @@ object DestTableBuilder {
   //   - dot-safe (backticks)
   //   - if name is unqualified, finds unique ".tail"
   //   - if ambiguous, prefers SourceTableName if provided
-  private def resolver(wideDf: DataFrame, defaultTable: Option[String]): String => Column = {
-    (name0: String) => {
-      val name = name0.trim
-      val tail = name.split('.').last
+  // Resolver:
+//   - dot-safe (backticks)
+//   - if name is unqualified, finds unique ".tail"
+//   - if ambiguous, prefers SourceTableName if provided
+private def resolver(wideDf: DataFrame, defaultTable: Option[String]): String => Column = {
+  (name0: String) => {
+    val name = name0.trim
+    val tail = name.split('.').last
 
-      def litCol(colName: String): Column = col(s"`$colName`") // dot-safe
+    def litCol(colName: String): Column = col(s"`$colName`") // dot-safe
 
-      if (wideDf.columns.contains(name)) return litCol(name)
-      if (wideDf.columns.contains(tail)) return litCol(tail)
-
+    if (wideDf.columns.contains(name)) {
+      litCol(name)
+    } else if (wideDf.columns.contains(tail)) {
+      litCol(tail)
+    } else {
       val dottedMatches = wideDf.columns.filter(c => c.endsWith("." + tail))
 
       dottedMatches.length match {
-        case 1 => litCol(dottedMatches.head)
+        case 1 =>
+          litCol(dottedMatches.head)
+
         case 0 =>
           throw new IllegalArgumentException(
             s"Cannot resolve column '$name0'. Try qualifying it (e.g. 'Unit.$tail'). " +
             s"Available examples: ${wideDf.columns.take(50).mkString(", ")}"
           )
+
         case _ =>
           val preferred = defaultTable.flatMap { t =>
             val cand = s"$t.$tail"
             if (wideDf.columns.contains(cand)) Some(cand) else None
           }
+
           preferred match {
             case Some(c) => litCol(c)
             case None =>
@@ -512,6 +522,8 @@ object DestTableBuilder {
       }
     }
   }
+}
+
 
   def buildForDestTable(destTableName: String, wideDf: DataFrame, mappingDf: DataFrame): DataFrame = {
 
