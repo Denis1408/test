@@ -602,4 +602,47 @@ object DestTableBuilder {
         else out.withColumn(destCol, finalValExpr)
 
       out =
-        if (out.columns.contains(destTextCol)) out.withCo
+        if (out.columns.contains(destTextCol)) out.withColumn(destTextCol, coalesce(finalTextExpr, col(s"`$destTextCol`")))
+        else out.withColumn(destTextCol, finalTextExpr)
+    }
+
+    // FINAL OUTPUT: ONLY base PK + mapped columns (+Text)
+    val mappedCols: Seq[String] =
+      rulesByDestCol.keys.toSeq.sorted.flatMap(dc => Seq(dc, s"${dc}Text")).distinct
+
+    val pkCols: Seq[String] = basePk.distinct.filter(out.columns.contains)
+
+    out.select((pkCols ++ mappedCols).map(c => col(s"`$c`")): _*)
+  }
+}
+
+// ------------------------------
+// Public helper: build destination table output
+// ------------------------------
+def buildDestTable(destTableName: String, baseTable: String, graph: TableGraph, mappingDf: DataFrame): DataFrame = {
+  val baseNode = graph.tables.getOrElse(baseTable, throw new IllegalArgumentException(s"Missing base table: $baseTable"))
+  val wide = WideBuilder.buildWideDf(graph, mappingDf, destTableName, baseTable)
+  DestTableBuilder.buildForDestTable(destTableName, baseNode.pk, wide, mappingDf)
+}
+
+// =================================================================================================
+// USAGE EXAMPLE (adapt to your real schema)
+// -------------------------------------------------------------------------------------------------
+// val dfUnit: DataFrame = ...
+// val dfVehicle: DataFrame = ... // (if needed as base or join target)
+// val mappingDf: DataFrame = ...  // MUST include DestValueDescription column
+//
+// val graph = TableGraph(
+//   tables = Map(
+//     "Unit" -> TableNode(dfUnit, pk = Seq("Crash_Id","Unit_Id"))
+//     // add more tables...
+//   ),
+//   edges = Seq(
+//     // JoinEdge("A","B", Seq("Crash_Id"), Seq("Crash_Id"), "left")
+//   )
+// )
+//
+// // Example: build Vehicle destination using Unit as base (if your Vehicle grain is Unit-level)
+// val vehicleOut = buildDestTable(destTableName="Vehicle", baseTable="Unit", graph=graph, mappingDf=mappingDf)
+// vehicleOut.show(false)
+// =================================================================================================
