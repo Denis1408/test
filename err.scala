@@ -1,3 +1,43 @@
+val rootPath =
+  s"abfss://$container@$storageAccount.dfs.core.windows.net/"
+
+val storageConnected = try {
+  dbutils.fs.ls(rootPath)
+
+  println(s"✓ Successfully connected to ABFSS: $rootPath")
+  true
+
+} catch {
+  case e: Exception =>
+    println(s"✗ Cannot connect to ABFSS: $rootPath")
+    println(s"Type: ${e.getClass.getName}")
+    println(s"Message: ${e.getMessage}")
+    false
+}
+
+if (!storageConnected) {
+  dbutils.notebook.exit("ABFSS storage connection failed")
+}
+
+val folderExists = try {
+  dbutils.fs.ls(filesPath)
+  true
+} catch {
+  case _: java.io.FileNotFoundException => false
+
+  case e: Exception
+      if Option(e.getMessage)
+        .exists(_.toLowerCase.contains("no such file or directory")) =>
+    false
+
+  case e: Exception =>
+    println(s"Unexpected error checking folder:")
+    println(s"${e.getClass.getName}: ${e.getMessage}")
+    throw e
+}
+
+/*------------------------------------------------------*/
+
 val folderExists = try {
   dbutils.fs.ls(filesPath)
   println(s"✓ Storage connected and path accessible: $filesPath")
