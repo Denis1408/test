@@ -1093,3 +1093,16 @@ object MappingAutomation {
   }
 }
 
+// -------------------------
+
+val outMap: Map[String, DataFrame] = MappingAutomation.buildAllDestTablesAsMap(
+  spark = spark,
+  mappingDf = mappingDF,
+  pkByTable = pkByTable,
+  joinEdgesRaw = joinEdges,
+  sourceTablePriority = sourceTablePriority,
+  excludeDestIdFor = excludeDestIdFor,
+  dedupeDestByPk = dedupTables,
+  renameRulesByDest = renameRulesByDest,
+  tableLoader = tableLoader
+)
