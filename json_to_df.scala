@@ -85,3 +85,25 @@ val drugtestresult_df_init = renumberIds(
   "People_Id", "DrugTestResult_Id"
 )
 
+
+
+val resultDFs = Seq(
+  "Crash" -> crash_df_init,
+  "Units" -> units_df_init,
+  "Witnesses" -> witnesses_df_init,
+  "DamagedAreas" -> damagedareas_df_init,
+  "SequenceOfEvents" -> sequenceofevents_df_init,
+  "People" -> people_df_init,
+  "Endorsements" -> endorsements_df_init,
+  "Restrictions" -> restrictions_df_init,
+  "DrugTestResult" -> drugtestresult_df_init
+)
+
+resultDFs.foreach { case (name, data) =>
+  println(s"$name: ${data.count()} rows")
+}
+
+display(people_df_init)
+
+
+
